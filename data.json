@@ -1,10 +1,10 @@
 {
   "2026": [
-    { "title": "Singapore", "folder": "lofoten", "count": 12 },
-    { "title": "Kuala-Lumpur", "folder": "swiss", "count": 8 }
+    { "title": "Singapore", "folder": "Singapore", "count": 12 },
+    { "title": "Kuala-Lumpur", "folder": "Kuala-Lumpur", "count": 8 }
   ],
   "2025": [
-    { "title": "Langkawi", "folder": "atacama", "count": 24 }
-    { "title": "Penang", "folder": "atacama", "count": 5 }
+    { "title": "Langkawi", "folder": "Langkawi", "count": 24 }
+    { "title": "Penang", "folder": "Penang", "count": 5 }
   ]
 }
