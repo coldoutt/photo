@@ -103,12 +103,12 @@
             
             return `
               <div onclick="openGallery('${trip.title}', '${year}/${trip.folder}', ${trip.count})" class="group cursor-pointer">
-                <div class="aspect-[4/5] bg-zinc-900 overflow-hidden mb-4 relative">
+                <div class="aspect-[4/5] bg-zinc-900 overflow-hidden mb-1 relative block">
                   <img src="${coverUrl}" 
                        onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center text-[8px] tracking-widest opacity-20\'>IMAGE NOT FOUND</div>'"
                        class="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000">
                 </div>
-                <h3 class="text-white text-3xl font-thin lowercase tracking-tighter opacity-60 group-hover:opacity-100 transition-opacity duration-500">${trip.title}</h3>
+                <h3 class="text-white text-3xl font-thin lowercase tracking-tighter opacity-60 group-hover:opacity-100 transition-opacity duration-500 leading-tight">${trip.title}</h3>
               </div>
             `;
           }).join('');
