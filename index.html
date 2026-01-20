@@ -10,6 +10,7 @@
     body { background-color: #000; overflow-x: hidden; }
     section { scroll-margin-top: 100px; }
     
+    /* Анимация появления */
     .reveal {
       opacity: 0;
       transform: translateY(50px);
@@ -18,11 +19,13 @@
     }
     .reveal.active { opacity: 1; transform: translateY(0); }
 
+    /* Сетка Masonry для сохранения пропорций */
     .masonry-grid { column-count: 2; column-gap: 0.75rem; }
     @media (min-width: 768px) { .masonry-grid { column-count: 3; } }
     @media (min-width: 1024px) { .masonry-grid { column-count: 4; } }
     .masonry-item { break-inside: avoid; margin-bottom: 0.75rem; background: #0a0a0a; }
 
+    /* Лайтбокс */
     #lightbox {
       display: none; position: fixed; inset: 0; z-index: 200;
       background: rgba(0,0,0,0.9); backdrop-filter: blur(20px);
@@ -35,6 +38,7 @@
 
     #back-to-top { opacity: 0; visibility: hidden; transition: all 0.4s ease; }
     #back-to-top.visible { opacity: 1; visibility: visible; }
+    
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #000; }
     ::-webkit-scrollbar-thumb { background: #18181b; }
@@ -71,10 +75,10 @@
   </footer>
 
   <script>
-    // ИЗМЕНЕНО НА web
     const GITHUB_USER = "coldoutt";
     const GITHUB_REPO = "web";
     const BRANCH = "main";
+    // Путь к изображениям. Если папки 'photo' в репозитории нет, удалите её из строки ниже.
     const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${BRANCH}/photo`;
 
     async function initSite() {
@@ -82,28 +86,35 @@
       try {
         const response = await fetch(`data.json?v=${new Date().getTime()}`);
         if (!response.ok) throw new Error(`data.json not found`);
-        
         const data = await response.json();
+        
         const navContainer = document.getElementById('nav-years');
         const years = Object.keys(data).sort((a, b) => b - a);
 
         years.forEach(year => {
+          // Ссылки в меню
           const navLink = document.createElement('a');
           navLink.href = `#year-${year}`;
           navLink.className = "hover:text-white transition-colors";
           navLink.innerText = year;
           navContainer.appendChild(navLink);
 
+          // Секция года
           const section = document.createElement('section');
           section.id = `year-${year}`;
           section.className = 'mb-24 reveal';
           
           const tripsHtml = data[year].map(trip => {
+            const folderNum = trip.folder.split('_')[0];
             const randomIdx = Math.floor(Math.random() * trip.count) + 1;
-            const coverUrl = `${RAW_BASE}/${year}/${trip.folder}/${randomIdx}.jpg`;
+            const photoNum = String(randomIdx).padStart(2, '0');
+            
+            // Имя файла: 2026_01_01.jpg
+            const fileName = `${year}_${folderNum}_${photoNum}.jpg`;
+            const coverUrl = `${RAW_BASE}/${year}/${trip.folder}/${fileName}`;
             
             return `
-              <div onclick="openGallery('${trip.title}', '${year}/${trip.folder}', ${trip.count})" class="group cursor-pointer">
+              <div onclick="openGallery('${trip.title}', '${year}', '${trip.folder}', '${folderNum}', ${trip.count})" class="group cursor-pointer">
                 <div class="aspect-[4/5] bg-zinc-900 overflow-hidden mb-1 relative block">
                   <img src="${coverUrl}" 
                        onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center text-[8px] tracking-widest opacity-20\'>IMAGE NOT FOUND</div>'"
@@ -125,6 +136,7 @@
           container.appendChild(section);
         });
 
+        // Анимация появления при скролле
         const observer = new IntersectionObserver((entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting) entry.target.classList.add('active');
@@ -138,7 +150,8 @@
       }
     }
 
-    function openGallery(title, path, count) {
+    // Открытие папки
+    function openGallery(title, year, folderFull, folderNum, count) {
       const grid = document.getElementById('gallery-grid');
       document.getElementById('gallery-title').innerText = title;
       grid.innerHTML = '';
@@ -148,15 +161,21 @@
       for (let i = 1; i <= count; i++) {
         const item = document.createElement('div');
         item.className = 'masonry-item overflow-hidden';
-        const imgUrl = `${RAW_BASE}/${path}/${i}.jpg`;
+        
+        const photoNum = String(i).padStart(2, '0');
+        const fileName = `${year}_${folderNum}_${photoNum}.jpg`;
+        const imgUrl = `${RAW_BASE}/${year}/${folderFull}/${fileName}`;
+        
         const img = document.createElement('img');
         img.src = imgUrl;
         img.className = 'w-full h-auto opacity-0 transition-all duration-1000 cursor-zoom-in block';
+        
         img.onload = function() {
           this.classList.replace('opacity-0', 'opacity-60');
           this.classList.add('hover:opacity-100');
         };
         img.onclick = () => openLightbox(imgUrl);
+
         item.appendChild(img);
         grid.appendChild(item);
       }
@@ -172,6 +191,7 @@
       document.getElementById('back-to-top').classList.toggle('visible', galleryOverlay.scrollTop > 800);
     });
 
+    // Управление клавишами
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (document.getElementById('lightbox').classList.contains('active')) closeLightbox();
