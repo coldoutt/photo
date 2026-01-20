@@ -4,7 +4,7 @@
     { "title": "Куала-Лумпур", "folder": "02_Kuala-Lumpur", "count": 8 }
   ],
   "2025": [
-    { "title": "Лангкави", "folder": "10_Langkawi", "count": 24 },
-    { "title": "Пенанг", "folder": "09_Penang", "count": 79 }
+    { "title": "Пенанг", "folder": "09_Penang", "count": 79 },
+    { "title": "Лангкави", "folder": "10_Langkawi", "count": 24 }
   ]
 }
