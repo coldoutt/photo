@@ -12,13 +12,11 @@ const overlay = document.getElementById('gallery-overlay');
 circle.style.strokeDasharray = `${circumference} ${circumference}`;
 circle.style.strokeDashoffset = circumference;
 
-// Функция прокрутки вверх
 function scrollToTop() {
   const target = !overlay.classList.contains('hidden') ? overlay : window;
   target.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Отслеживание скролла
 const handleScroll = (e) => {
   const scrollY = e.target === overlay ? overlay.scrollTop : window.scrollY;
   btnTop.classList.toggle('visible', scrollY > 600);
@@ -27,7 +25,6 @@ const handleScroll = (e) => {
 window.addEventListener('scroll', handleScroll);
 overlay.addEventListener('scroll', handleScroll);
 
-// Инициализация сайта
 async function initSite() {
   try {
     const response = await fetch(`data.json?v=${new Date().getTime()}`);
@@ -66,7 +63,6 @@ async function initSite() {
   } catch (e) { console.error(e); }
 }
 
-// Открытие папки и подгрузка Masonry
 async function openGallery(title, year, folderFull, fNum, count) {
   const grid = document.getElementById('gallery-grid');
   const loader = document.getElementById('loader-container');
@@ -123,9 +119,6 @@ function closeGallery() {
     overlay.classList.add('hidden'); 
     document.body.style.overflow = 'auto'; 
 }
-
-function closeLightbox() { 
-    document.getElementById('lightbox').classList.remove('active'); 
-}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
 
 initSite();
