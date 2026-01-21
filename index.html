@@ -46,7 +46,7 @@ ader-container<!DOCTYPE html>
       transform-origin: 50% 50%; 
     }
     
-    #transparent1 { color: transparent; }
+    #transparent_circle { color: transparent; }
 
     /* Кнопка вверх справа */
     #back-to-top { right: 30px; color: white; opacity: 0; visibility: hidden; cursor: pointer; }
@@ -78,7 +78,7 @@ ader-container<!DOCTYPE html>
 
   <div id="loader-container" class="floating-ui">
     <svg width="44" height="44" viewBox="0 0 44 44">
-      <circle class="text-white/5" id="transparent1" stroke="currentColor" stroke-width="2" fill="transparent" r="18" cx="22" cy="22"/>
+      <circle class="text-white/5" id="transparent_circle" stroke="currentColor" stroke-width="2" fill="transparent" r="18" cx="22" cy="22"/>
       <circle id="progress-circle" class="text-white" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="transparent" r="18" cx="22" cy="22"/>
     </svg>
   </div>
@@ -218,7 +218,7 @@ ader-container<!DOCTYPE html>
           img.onerror = resolve;
         });
       }
-      // setTimeout(() => loader.style.opacity = "0", 800);
+      setTimeout(() => loader.style.opacity = "0", 800);
     }
 
     function closeGallery() { 
