@@ -4,38 +4,39 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+  <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
   <title>coldout — photo archive</title>
   <style>
     html { scroll-behavior: smooth; }
     body { background-color: #000; overflow-x: hidden; }
-    section { scroll-margin-top: 100px; }
     
-    .reveal {
-      opacity: 0;
-      transform: translateY(50px);
-      transition: all 1.2s cubic-bezier(0.2, 1, 0.3, 1);
-    }
-    .reveal.active { opacity: 1; transform: translateY(0); }
-
-    /* Masonry сетка через колонки */
-    .masonry-grid { 
-      column-count: 2; 
-      column-gap: 1rem;
-    }
-    @media (min-width: 768px) { .masonry-grid { column-count: 3; } }
-    @media (min-width: 1024px) { .masonry-grid { column-count: 4; } }
-
-    .photo-item { 
-      break-inside: avoid;
-      margin-bottom: 1rem;
+    /* Сетка */
+    .grid-container { width: 100%; margin: 0 auto; }
+    .grid-item { 
+      width: calc(50% - 12px); /* 2 колонки на мобильных */
+      margin-bottom: 24px;
       background: #050505;
-      position: relative;
+      transition: opacity 0.8s ease;
     }
+    @media (min-width: 768px) { .grid-item { width: calc(33.333% - 16px); } }
+    @media (min-width: 1024px) { .grid-item { width: calc(25% - 18px); } }
 
-    .photo-item img {
-      width: 100%;
-      height: auto; /* Оригинальное соотношение сторон */
-      display: block;
+    /* Заглушка (оригинальное соотношение сторон задается через JS или 4/5 по умолчанию) */
+    .grid-item.loading { aspect-ratio: 4/5; }
+    .grid-item img { width: 100%; display: block; opacity: 0; transition: opacity 0.6s ease; }
+    .grid-item img.loaded { opacity: 0.6; }
+    .grid-item img.loaded:hover { opacity: 1; }
+
+    /* Лоадер в углу */
+    #loader-container {
+      position: fixed; bottom: 30px; left: 30px;
+      width: 40px; height: 40px; z-index: 150;
+      transition: opacity 0.5s ease; pointer-events: none;
+    }
+    .progress-ring__circle {
+      transition: stroke-dashoffset 0.3s linear;
+      transform: rotate(-90deg); transform-origin: 50% 50%;
     }
 
     #lightbox {
@@ -46,19 +47,8 @@
     #lightbox.active { display: flex; }
     #lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; }
 
-    /* Круг загрузки в левом нижнем углу */
-    #loader-container {
-      position: fixed; bottom: 30px; left: 30px;
-      width: 40px; height: 40px; z-index: 150;
-      display: flex; align-items: center; justify-content: center;
-      transition: opacity 0.5s ease;
-      pointer-events: none;
-    }
-    .progress-ring__circle {
-      transition: stroke-dashoffset 0.3s linear;
-      transform: rotate(-90deg);
-      transform-origin: 50% 50%;
-    }
+    .reveal { opacity: 0; transform: translateY(30px); transition: all 1s ease; }
+    .reveal.active { opacity: 1; transform: translateY(0); }
 
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #000; }
@@ -79,19 +69,19 @@
     </svg>
   </div>
 
-  <div id="lightbox" onclick="closeLightbox()">
-    <img id="lightbox-img" src="" alt="">
-  </div>
-
   <div id="gallery-overlay" class="hidden fixed inset-0 bg-black z-[100] overflow-y-auto p-6 md:p-20">
     <div class="flex justify-between items-baseline mb-16 max-w-[1600px] mx-auto">
       <h2 id="gallery-title" class="text-white text-3xl font-thin lowercase tracking-tighter"></h2>
       <button onclick="closeGallery()" class="text-zinc-600 hover:text-white uppercase text-[9px] tracking-[0.3em] transition-colors border-b border-zinc-800 hover:border-white pb-1">close</button>
     </div>
-    <div id="gallery-grid" class="masonry-grid max-w-[1600px] mx-auto pb-20"></div>
+    <div id="gallery-grid" class="grid-container max-w-[1600px]"></div>
   </div>
 
-  <main id="main-content" class="pt-24 px-6 md:px-20 max-w-[1600px] mx-auto">
+  <div id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img" src="">
+  </div>
+
+  <main class="pt-24 px-6 md:px-20 max-w-[1600px] mx-auto">
     <div id="years-container"></div>
   </main>
 
@@ -101,18 +91,12 @@
     const BRANCH = "main";
     const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${BRANCH}/photo`;
 
+    let msnry;
     const circle = document.getElementById('progress-circle');
-    const radius = circle.r.baseVal.value;
-    const circumference = 2 * Math.PI * radius;
+    const circumference = 2 * Math.PI * 18;
     circle.style.strokeDasharray = `${circumference} ${circumference}`;
-    circle.style.strokeDashoffset = circumference;
-
-    function setProgress(percent) {
-      circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
-    }
 
     async function initSite() {
-      const container = document.getElementById('years-container');
       try {
         const response = await fetch(`data.json?v=${new Date().getTime()}`);
         const data = await response.json();
@@ -120,9 +104,9 @@
 
         years.forEach(year => {
           const navLink = document.createElement('a');
-          navLink.href = `#year-${year}`;
           navLink.innerText = year;
           navLink.className = "hover:text-white transition-colors cursor-pointer";
+          navLink.onclick = () => document.getElementById(`year-${year}`).scrollIntoView();
           document.getElementById('nav-years').appendChild(navLink);
 
           const section = document.createElement('section');
@@ -130,89 +114,85 @@
           section.className = 'mb-24 reveal';
           
           const tripsHtml = data[year].map(trip => {
-            const folderNum = trip.folder.split('_')[0];
-            const randomIdx = Math.floor(Math.random() * trip.count) + 1;
-            const photoNum = String(randomIdx).padStart(2, '0');
-            const fileName = `${year}_${folderNum}_${photoNum}.jpg`;
+            const fNum = trip.folder.split('_')[0];
+            const fileName = `${year}_${fNum}_01.jpg`;
             const coverUrl = `${RAW_BASE}/${year}/${trip.folder}/${fileName}`;
-            
             return `
-              <div onclick="openGallery('${trip.title}', '${year}', '${trip.folder}', '${folderNum}', ${trip.count})" class="group cursor-pointer">
-                <div class="aspect-[4/5] bg-zinc-900 overflow-hidden mb-1 relative block">
-                  <img src="${coverUrl}" class="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000">
-                </div>
-                <h3 class="text-white text-3xl font-thin lowercase tracking-tighter opacity-60 group-hover:opacity-100 transition-opacity duration-500 leading-tight">${trip.title}</h3>
-              </div>
-            `;
+              <div onclick="openGallery('${trip.title}', '${year}', '${trip.folder}', '${fNum}', ${trip.count})" class="group cursor-pointer">
+                <div class="aspect-[4/5] bg-zinc-900 overflow-hidden mb-1"><img src="${coverUrl}" class="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000"></div>
+                <h3 class="text-white text-3xl font-thin lowercase tracking-tighter opacity-60 group-hover:opacity-100 transition-opacity duration-500">${trip.title}</h3>
+              </div>`;
           }).join('');
 
           section.innerHTML = `<div class="border-b border-zinc-900 pb-2 mb-10"><h2 class="text-5xl md:text-6xl font-extralight text-white tracking-tighter">${year}</h2></div>
                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">${tripsHtml}</div>`;
-          container.appendChild(section);
+          document.getElementById('years-container').appendChild(section);
         });
 
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('active'); });
-        }, { threshold: 0.1 });
-        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('active') }));
+        document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
       } catch (e) { console.error(e); }
     }
 
-    async function openGallery(title, year, folderFull, folderNum, count) {
+    async function openGallery(title, year, folderFull, fNum, count) {
       const grid = document.getElementById('gallery-grid');
       const loader = document.getElementById('loader-container');
-      
       grid.innerHTML = '';
       document.getElementById('gallery-title').innerText = title;
-      setProgress(0);
-      loader.classList.remove('opacity-0');
       document.getElementById('gallery-overlay').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
+      loader.classList.remove('opacity-0');
 
-      // Для сохранения порядка Masonry, мы загружаем всё и вставляем последовательно
+      // Инициализация Masonry
+      msnry = new Masonry(grid, {
+        itemSelector: '.grid-item',
+        columnWidth: '.grid-item',
+        percentPosition: true,
+        gutter: 20,
+        transitionDuration: '0.4s'
+      });
+
       for (let i = 1; i <= count; i++) {
         const photoNum = String(i).padStart(2, '0');
-        const fileName = `${year}_${folderNum}_${photoNum}.jpg`;
+        const fileName = `${year}_${fNum}_${photoNum}.jpg`;
         const imgUrl = `${RAW_BASE}/${year}/${folderFull}/${fileName}`;
-        
-        await new Promise((resolve) => {
+
+        // 1. Создаем заглушку
+        const item = document.createElement('div');
+        item.className = 'grid-item loading';
+        grid.appendChild(item);
+        msnry.appended(item);
+        msnry.layout();
+
+        // 2. Грузим фото
+        await new Promise(resolve => {
           const img = new Image();
           img.src = imgUrl;
-          img.className = 'opacity-0 transition-opacity duration-700 cursor-zoom-in';
-          
           img.onload = () => {
-            const item = document.createElement('div');
-            item.className = 'photo-item';
+            item.classList.remove('loading');
             item.appendChild(img);
-            grid.appendChild(item);
-            
-            // Плавное появление
-            setTimeout(() => img.classList.replace('opacity-0', 'opacity-60'), 10);
-            img.classList.add('hover:opacity-100');
-            img.onclick = () => openLightbox(imgUrl);
-            
-            setProgress((i / count) * 100);
-            resolve();
+            imagesLoaded(item, () => {
+              img.classList.add('loaded');
+              msnry.layout(); // Пересчитываем сетку после вставки
+              circle.style.strokeDashoffset = circumference - (i / count) * circumference;
+              resolve();
+            });
+            img.onclick = () => {
+                document.getElementById('lightbox-img').src = imgUrl;
+                document.getElementById('lightbox').classList.add('active');
+            };
           };
-          img.onerror = () => resolve(); // Пропускаем битые фото
+          img.onerror = resolve;
         });
       }
       setTimeout(() => loader.classList.add('opacity-0'), 800);
     }
 
     function closeGallery() { 
-      document.getElementById('gallery-overlay').classList.add('hidden'); 
-      document.body.style.overflow = 'auto';
+        document.getElementById('gallery-overlay').classList.add('hidden'); 
+        document.body.style.overflow = 'auto'; 
     }
-    
-    function openLightbox(src) { 
-      document.getElementById('lightbox-img').src = src; 
-      document.getElementById('lightbox').classList.add('active'); 
-    }
-    
-    function closeLightbox() { 
-      document.getElementById('lightbox').classList.remove('active'); 
-    }
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
 
     initSite();
   </script>
