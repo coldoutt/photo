@@ -11,33 +11,42 @@
     html { scroll-behavior: smooth; }
     body { background-color: #000; overflow-x: hidden; }
     
-    /* Сетка */
     .grid-container { width: 100%; margin: 0 auto; }
     .grid-item { 
-      width: calc(50% - 12px); /* 2 колонки на мобильных */
+      width: calc(50% - 12px); 
       margin-bottom: 24px;
       background: #050505;
-      transition: opacity 0.8s ease;
     }
     @media (min-width: 768px) { .grid-item { width: calc(33.333% - 16px); } }
     @media (min-width: 1024px) { .grid-item { width: calc(25% - 18px); } }
 
-    /* Заглушка (оригинальное соотношение сторон задается через JS или 4/5 по умолчанию) */
     .grid-item.loading { aspect-ratio: 4/5; }
     .grid-item img { width: 100%; display: block; opacity: 0; transition: opacity 0.6s ease; }
     .grid-item img.loaded { opacity: 0.6; }
     .grid-item img.loaded:hover { opacity: 1; }
 
-    /* Лоадер в углу */
+    /* Круг загрузки */
     #loader-container {
       position: fixed; bottom: 30px; left: 30px;
       width: 40px; height: 40px; z-index: 150;
       transition: opacity 0.5s ease; pointer-events: none;
     }
-    .progress-ring__circle {
-      transition: stroke-dashoffset 0.3s linear;
-      transform: rotate(-90deg); transform-origin: 50% 50%;
+    .progress-ring__circle { transition: stroke-dashoffset 0.3s linear; transform: rotate(-90deg); transform-origin: 50% 50%; }
+
+    /* Кнопка Вверх */
+    #back-to-top {
+      position: fixed; bottom: 30px; right: 30px;
+      width: 40px; height: 40px; z-index: 160;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px border rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: white; opacity: 0; visibility: hidden;
+      transition: all 0.4s ease; cursor: pointer;
     }
+    #back-to-top.visible { opacity: 1; visibility: visible; }
+    #back-to-top:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); }
 
     #lightbox {
       display: none; position: fixed; inset: 0; z-index: 200;
@@ -69,6 +78,10 @@
     </svg>
   </div>
 
+  <div id="back-to-top" onclick="scrollToTop()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+  </div>
+
   <div id="gallery-overlay" class="hidden fixed inset-0 bg-black z-[100] overflow-y-auto p-6 md:p-20">
     <div class="flex justify-between items-baseline mb-16 max-w-[1600px] mx-auto">
       <h2 id="gallery-title" class="text-white text-3xl font-thin lowercase tracking-tighter"></h2>
@@ -94,7 +107,28 @@
     let msnry;
     const circle = document.getElementById('progress-circle');
     const circumference = 2 * Math.PI * 18;
+    const btnTop = document.getElementById('back-to-top');
+    const overlay = document.getElementById('gallery-overlay');
     circle.style.strokeDasharray = `${circumference} ${circumference}`;
+
+    // Универсальная прокрутка вверх
+    function scrollToTop() {
+      if (!overlay.classList.contains('hidden')) {
+        overlay.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    // Слежка за скроллом для кнопки
+    const handleScroll = (e) => {
+      const scrollY = e.target === overlay ? overlay.scrollTop : window.scrollY;
+      if (scrollY > 500) btnTop.classList.add('visible');
+      else btnTop.classList.remove('visible');
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    overlay.addEventListener('scroll', handleScroll);
 
     async function initSite() {
       try {
@@ -139,17 +173,16 @@
       const loader = document.getElementById('loader-container');
       grid.innerHTML = '';
       document.getElementById('gallery-title').innerText = title;
-      document.getElementById('gallery-overlay').classList.remove('hidden');
+      overlay.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
       loader.classList.remove('opacity-0');
+      btnTop.classList.remove('visible'); // Сброс кнопки при открытии
 
-      // Инициализация Masonry
       msnry = new Masonry(grid, {
         itemSelector: '.grid-item',
         columnWidth: '.grid-item',
         percentPosition: true,
-        gutter: 20,
-        transitionDuration: '0.4s'
+        gutter: 20
       });
 
       for (let i = 1; i <= count; i++) {
@@ -157,14 +190,11 @@
         const fileName = `${year}_${fNum}_${photoNum}.jpg`;
         const imgUrl = `${RAW_BASE}/${year}/${folderFull}/${fileName}`;
 
-        // 1. Создаем заглушку
         const item = document.createElement('div');
         item.className = 'grid-item loading';
         grid.appendChild(item);
         msnry.appended(item);
-        msnry.layout();
 
-        // 2. Грузим фото
         await new Promise(resolve => {
           const img = new Image();
           img.src = imgUrl;
@@ -173,7 +203,7 @@
             item.appendChild(img);
             imagesLoaded(item, () => {
               img.classList.add('loaded');
-              msnry.layout(); // Пересчитываем сетку после вставки
+              msnry.layout();
               circle.style.strokeDashoffset = circumference - (i / count) * circumference;
               resolve();
             });
@@ -189,7 +219,7 @@
     }
 
     function closeGallery() { 
-        document.getElementById('gallery-overlay').classList.add('hidden'); 
+        overlay.classList.add('hidden'); 
         document.body.style.overflow = 'auto'; 
     }
     function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
