@@ -25,6 +25,17 @@ const handleScroll = (e) => {
 window.addEventListener('scroll', handleScroll);
 overlay.addEventListener('scroll', handleScroll);
 
+// Закрытие по нажатию ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === "Escape") {
+    if (document.getElementById('lightbox').classList.contains('active')) {
+      closeLightbox();
+    } else if (!overlay.classList.contains('hidden')) {
+      closeGallery();
+    }
+  }
+});
+
 async function initSite() {
   try {
     const response = await fetch(`data.json?v=${new Date().getTime()}`);
@@ -104,7 +115,8 @@ async function openGallery(title, year, folderFull, fNum, count) {
           circle.style.strokeDashoffset = circumference - (i / count) * circumference;
           resolve();
         });
-        img.onclick = () => {
+        img.onclick = (e) => {
+            e.stopPropagation();
             document.getElementById('lightbox-img').src = imgUrl;
             document.getElementById('lightbox').classList.add('active');
         };
